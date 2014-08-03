@@ -47,7 +47,7 @@ struct Task{
 	}
 };
 
-PotreeConverter::PotreeConverter(vector<string> fData, string workDir, float minGap, int maxDepth, string format, float range){
+PotreeConverter::PotreeConverter(vector<string> fData, string workDir, float minGap, int maxDepth, string format, float range, OutputFormat outFormat){
 	for(int i = 0; i < fData.size(); i++){
 		if(!boost::filesystem::exists(fData[i])){
 			throw PotreeException("file not found: " + fData[i]);
@@ -61,7 +61,7 @@ PotreeConverter::PotreeConverter(vector<string> fData, string workDir, float min
 	this->maxDepth = maxDepth;
 	this->format = format;
 	this->range = range;
-	this->outputFormat = OutputFormat::LAZ;
+	this->outputFormat = outFormat;
 	buffer = new char[4*10*1000*1000*sizeof(float)];
 
 	boost::filesystem::path dataDir(workDir + "/data");
@@ -288,6 +288,24 @@ void PotreeConverter::convert(uint64_t numPoints){
 
 		cloudJs << "\t\t" << "[\"r\"," << numAccepted << "]," << endl;
 		saveCloudJS();
+
+		rHeader.min_x = aabb.min.x;
+		rHeader.min_y = aabb.min.y;
+		rHeader.min_z = aabb.min.z;
+		rHeader.max_x = aabb.max.x;
+		rHeader.max_y = aabb.max.y;
+		rHeader.max_z = aabb.max.z;
+		rHeader.number_of_point_records = numAccepted;
+		rWriter->update_header(&rHeader, false);
+
+		dHeader.min_x = aabb.min.x;
+		dHeader.min_y = aabb.min.y;
+		dHeader.min_z = aabb.min.z;
+		dHeader.max_x = aabb.max.x;
+		dHeader.max_y = aabb.max.y;
+		dHeader.max_z = aabb.max.z;
+		dHeader.extended_number_of_point_records = numRejected;
+		dWriter->update_header(&dHeader, false);
 
 		rWriter->close();
 		dWriter->close();
@@ -523,13 +541,13 @@ ProcessResult PotreeConverter::process(string source, string target, AABB aabb, 
 
 			if(accepted){
 				lrOut[index]->write_point(&lp);
-				//rAABB[index].update(coord);
+				rAABB[index].update(Vector3(lp.get_x(), lp.get_y(), lp.get_z()));
 
 				numPoints[index]++;
 				numAccepted++;
 			}else{
 				ldOut[index]->write_point(&lp);
-				//dAABB[index].update(coord);
+				dAABB[index].update(Vector3(lp.get_x(), lp.get_y(), lp.get_z()));
 
 				numPointsRejected[index]++;
 				numRejected++;
@@ -540,6 +558,25 @@ ProcessResult PotreeConverter::process(string source, string target, AABB aabb, 
 		delete reader;
 
 		for(int i = 0; i < 8; i++){
+
+			// update headers
+			rHeader.extended_number_of_point_records = numPoints[i];
+			rHeader.min_x = rAABB[i].min.x;
+			rHeader.min_y = rAABB[i].min.y;
+			rHeader.min_z = rAABB[i].min.z;
+			rHeader.max_x = rAABB[i].max.x;
+			rHeader.max_y = rAABB[i].max.y;
+			rHeader.max_z = rAABB[i].max.z;
+			lrOut[i]->update_header(&rHeader, false);
+
+			dHeader.extended_number_of_point_records = numPointsRejected[i];
+			dHeader.min_x =dAABB[i].min.x;
+			dHeader.min_y =dAABB[i].min.y;
+			dHeader.min_z =dAABB[i].min.z;
+			dHeader.max_x =dAABB[i].max.x;
+			dHeader.max_y =dAABB[i].max.y;
+			dHeader.max_z =dAABB[i].max.z;
+			ldOut[i]->update_header(&dHeader, false);
 
 			// close outstreams
 			lrOut[i]->close();

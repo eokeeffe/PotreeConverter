@@ -59,6 +59,8 @@ int main(int argc, char **argv){
 	int levels;
 	string format;
 	float range;
+	string outFormatString;
+	OutputFormat outFormat;
 
 	cout.imbue(std::locale(""));
 
@@ -72,6 +74,7 @@ int main(int argc, char **argv){
 			("levels,l", po::value<int>(&levels), "Number of levels that will be generated. 0: only root, 1: root and its children, ...")
 			("input-format,f", po::value<string>(&format), "Input format. xyz: cartesian coordinates as floats, rgb: colors as numbers, i: intensity as number")
 			("range,r", po::value<float>(&range), "Range of rgb or intensity. ")
+			("output-format", po::value<string>(&outFormatString), "Output format can be BINARY, LAS or LAZ. Default is LAS")
 			("source", po::value<std::vector<std::string> >(), "Source file. Can be LAS, PLY or XYZ");
 		po::positional_options_description p; 
 		p.add("source", -1); 
@@ -100,6 +103,14 @@ int main(int argc, char **argv){
 		if(!vm.count("levels")) levels = 3;
 		if(!vm.count("input-format")) format = "xyzrgb";
 		if(!vm.count("range")) range = 255;
+		if(!vm.count("output-format")) outFormatString = "LAS";
+		if(outFormatString == "BINARY"){
+			outFormat = OutputFormat::BINARY;
+		}else if(outFormatString == "LAS"){
+			outFormat = OutputFormat::LAS;
+		}else if(outFormatString == "LAZ"){
+			outFormat = OutputFormat::LAZ;
+		}
 
 		cout << "== params ==" << endl;
 		for(int i = 0; i < source.size(); i++){
@@ -110,6 +121,7 @@ int main(int argc, char **argv){
 		cout << "levels: " << levels << endl;
 		cout << "format: " << format << endl;
 		cout << "range: " << range << endl;
+		cout << "output-format: " << outFormatString << endl;
 		cout << endl;
 	}catch(exception &e){
 		cout << "ERROR: " << e.what() << endl;
@@ -120,7 +132,7 @@ int main(int argc, char **argv){
 	auto start = high_resolution_clock::now();
 	
 	try{
-		PotreeConverter pc(source, outdir, spacing, levels, format, range);
+		PotreeConverter pc(source, outdir, spacing, levels, format, range, outFormat);
 		pc.convert();
 	}catch(exception &e){
 		cout << "ERROR: " << e.what() << endl;

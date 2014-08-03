@@ -65,7 +65,7 @@ private:
 
 public:
 
-	PotreeConverter(vector<string> fData, string workDir, float minGap, int maxDepth, string format, float range);
+	PotreeConverter(vector<string> fData, string workDir, float minGap, int maxDepth, string format, float range, OutputFormat outFormat);
 
 	void convert(uint64_t numPoints);
 	void convert();
